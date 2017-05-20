@@ -9,6 +9,7 @@ import android.support.wearable.view.ConfirmationOverlay;
 import android.support.wearable.view.WatchViewStub;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.OrientationEventListener;
 import android.widget.TextView;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
@@ -18,7 +19,15 @@ public class MainActivity extends Activity implements SensorEventListener{
 
     private TextView mTextView;
     private SensorManager mSensorManager;
-    private Sensor mSensor;
+    private Sensor mSensor, mAccSensor, mMagSensor, mRotVecSensor;
+    private final float[] rotationMatrix = new float[9];
+    private final float[] orientationAngles = new float[3];
+    private final float[] accelerometerReading = new float[3];
+    private final float[] magnetometerReading = new float[3];
+
+    private int angle;
+    private boolean isSwipe = false;
+    private OrientationEventListener oel;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -33,8 +42,29 @@ public class MainActivity extends Activity implements SensorEventListener{
 
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
+//        mRotVecSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+//        Log.v("mRotVec", mRotVecSensor == null ? "true": "false");
+        mAccSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        mMagSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+//        mGyroSensor = mSensorManager.getDefaultSensor(Sensor.TYPE)
 
+        oel = new OrientationEventListener(getApplicationContext()) {
+            @Override
+            public void onOrientationChanged(int orientation) {
+                Log.v("Orient", Integer.toString(orientation));
+                angle = (orientation == -1) ? 90 : orientation - 180;
+            }
+        };
+
+
+    }
+    protected void onResume(){
+        super.onResume();
         mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
+        mSensorManager.registerListener(this, mRotVecSensor, SensorManager.SENSOR_DELAY_NORMAL);
+//        mSensorManager.registerListener(this, mAccSensor, SensorManager.SENSOR_DELAY_NORMAL);
+//        mSensorManager.registerListener(this, mMagSensor, SensorManager.SENSOR_DELAY_NORMAL);
+        oel.enable();
     }
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         switch (keyCode) {
@@ -57,9 +87,41 @@ public class MainActivity extends Activity implements SensorEventListener{
 
     @Override
     public final void onSensorChanged(SensorEvent ev){
-        String str = "X-axis" + Float.toString(ev.values[0]) + "\nY-axis" + Float.toString(ev.values[1]) + "\nZ-axis" + Float.toString(ev.values[2]);
-        //Log.v("Fuck", str);
-        mTextView.setText(str);
+        if(ev.sensor == mSensor) {
+            if(ev.values[0] > 5 || ev.values[1] > 5 || ev.values[2] > 5) {
+                String str = "X-axis" + Float.toString(ev.values[0]) + "\nY-axis" + Float.toString(ev.values[1]) + "\nZ-axis" + Float.toString(ev.values[2]);
+                Log.v("Fuck", str);
+//            mSensorManager.getRotationMatrix(rotationMatrix, null, )
+//            mSensorManager.getOrientation(rotationMatrix, orientationAngles);
+                mTextView.setText(str);
+
+                if(!isSwipe) {
+                    Log.v("angle", Integer.toString(angle));
+                    Log.v("Y-Axis", Double.toString(ev.values[1] * Math.sin(angle)));
+                    Log.v("Z-Axis", Double.toString((ev.values[2]) * Math.cos(angle)));
+                    double acc = Math.abs(ev.values[1]) * Math.sin(angle) - (ev.values[2]) * Math.cos(angle);
+                }
+            }
+        }
+//        } else if(ev.sensor == mAccSensor) {
+//            System.arraycopy(ev.values, 0, accelerometerReading, 0, accelerometerReading.length);
+//            updateOrientationAngles();
+//        } else if(ev.sensor == mMagSensor){
+//            System.arraycopy(ev.values, 0, magnetometerReading, 0, magnetometerReading.length);
+//            updateOrientationAngles();
+//        }
         return;
+    }
+    public void updateOrientationAngles(){
+        mSensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReading, magnetometerReading);
+        mSensorManager.getOrientation(rotationMatrix, orientationAngles);
+        String str = "X-angle " + Float.toString(orientationAngles[0]) + "Y-angle " + Float.toString(orientationAngles[1]) +"Z-angle " + Float.toString(orientationAngles[2]);
+        Log.v("orientation", str);
+    }
+
+    protected void onPause(){
+        super.onPause();
+        mSensorManager.unregisterListener(this);
+        oel.disable();
     }
 }
