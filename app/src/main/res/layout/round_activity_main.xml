@@ -5,12 +5,36 @@
     android:layout_height="match_parent"
     tools:context="com.kaist.khw.maestrotest.MainActivity"
     tools:deviceIds="wear_round">
-
-    <TextView
-        android:id="@+id/text"
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
         android:layout_centerVertical="true"
-        android:text="@string/hello_round" />
+        android:orientation="vertical">
+        <TextView
+            android:id="@+id/text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/hello_round" />
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <Button
+                android:id="@+id/bluetooth_active"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="setting">
+            </Button>
+            <Button
+                android:id="@+id/send_message"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="send">
+            </Button>
+        </LinearLayout>
+
+    </LinearLayout>
 </RelativeLayout>
