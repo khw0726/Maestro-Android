@@ -33,11 +33,11 @@ public class MainActivity extends Activity implements SensorEventListener{
     private Button mSettingButton;
     private Button mSendButton;
     private SensorManager mSensorManager;
-    private Sensor mSensor, mAccSensor, mMagSensor, mRotVecSensor;
-    private final float[] rotationMatrix = new float[9];
-    private final float[] orientationAngles = new float[3];
-    private final float[] accelerometerReading = new float[3];
-    private final float[] magnetometerReading = new float[3];
+    private Sensor mSensor;//, mAccSensor, mMagSensor, mRotVecSensor;
+//    private final float[] rotationMatrix = new float[9];
+//    private final float[] orientationAngles = new float[3];
+//    private final float[] accelerometerReading = new float[3];
+//    private final float[] magnetometerReading = new float[3];
 
     private int angle;
     private boolean isSwipe = false;
@@ -107,7 +107,7 @@ public class MainActivity extends Activity implements SensorEventListener{
                 mSendButton.setOnClickListener(new OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        sendMessage();
+                        sendMessage("Fuck");
 
                     }
                 });
@@ -116,20 +116,20 @@ public class MainActivity extends Activity implements SensorEventListener{
         });
 
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+//        mRotSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
         mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
 //        mRotVecSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
 //        Log.v("mRotVec", mRotVecSensor == null ? "true": "false");
-        mAccSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        mMagSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-//        mGyroSensor = mSensorManager.getDefaultSensor(Sensor.TYPE)
+//        mAccSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+//        mMagSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
 
-        oel = new OrientationEventListener(getApplicationContext()) {
-            @Override
-            public void onOrientationChanged(int orientation) {
-                Log.v("Orient", Integer.toString(orientation));
-                angle = (orientation == -1) ? 90 : orientation - 180;
-            }
-        };
+//        oel = new OrientationEventListener(getApplicationContext()) {
+//            @Override
+//            public void onOrientationChanged(int orientation) {
+//                Log.v("Orient", Integer.toString(orientation));
+//                angle = orientation; //(orientation == -1) ? 90 : orientation - 180;
+//            }
+//        };
 
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
@@ -142,10 +142,7 @@ public class MainActivity extends Activity implements SensorEventListener{
         super.onResume();
  //       mBluetoothAdapter.enable();
         mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
-        mSensorManager.registerListener(this, mRotVecSensor, SensorManager.SENSOR_DELAY_NORMAL);
-//        mSensorManager.registerListener(this, mAccSensor, SensorManager.SENSOR_DELAY_NORMAL);
-//        mSensorManager.registerListener(this, mMagSensor, SensorManager.SENSOR_DELAY_NORMAL);
-        oel.enable();
+//        oel.enable();
     }
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         switch (keyCode) {
@@ -163,48 +160,30 @@ public class MainActivity extends Activity implements SensorEventListener{
     }
     @Override
     public final void onAccuracyChanged(Sensor sensor, int accuracy){
-        return;
     }
 
     @Override
     public final void onSensorChanged(SensorEvent ev){
         if(ev.sensor == mSensor) {
-            if(ev.values[0] > 5 || ev.values[1] > 5 || ev.values[2] > 5) {
+            if(Math.abs(ev.values[2]) > 5) {
                 String str = "X-axis" + Float.toString(ev.values[0]) + "\nY-axis" + Float.toString(ev.values[1]) + "\nZ-axis" + Float.toString(ev.values[2]);
-                Log.v("Fuck", str);
-//            mSensorManager.getRotationMatrix(rotationMatrix, null, )
-//            mSensorManager.getOrientation(rotationMatrix, orientationAngles);
-                mTextView.setText(str);
-
-                if(!isSwipe) {
-                    Log.v("angle", Integer.toString(angle));
-                    Log.v("Y-Axis", Double.toString(ev.values[1] * Math.sin(angle)));
-                    Log.v("Z-Axis", Double.toString((ev.values[2]) * Math.cos(angle)));
-                    double acc = Math.abs(ev.values[1]) * Math.sin(angle) - (ev.values[2]) * Math.cos(angle);
-                }
+                sendMessage(str);
+                Log.v("Fuck you", str);
             }
         }
-//        } else if(ev.sensor == mAccSensor) {
-//            System.arraycopy(ev.values, 0, accelerometerReading, 0, accelerometerReading.length);
-//            updateOrientationAngles();
-//        } else if(ev.sensor == mMagSensor){
-//            System.arraycopy(ev.values, 0, magnetometerReading, 0, magnetometerReading.length);
-//            updateOrientationAngles();
-//        }
-        return;
     }
-    public void updateOrientationAngles(){
-        mSensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReading, magnetometerReading);
-        mSensorManager.getOrientation(rotationMatrix, orientationAngles);
-        String str = "X-angle " + Float.toString(orientationAngles[0]) + "Y-angle " + Float.toString(orientationAngles[1]) +"Z-angle " + Float.toString(orientationAngles[2]);
-        Log.v("orientation", str);
-    }
+//    public void updateOrientationAngles(){
+////        mSensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReading, magnetometerReading);
+////        mSensorManager.getOrientation(rotationMatrix, orientationAngles);
+//        String str = "X-angle " + Float.toString(orientationAngles[0]) + "Y-angle " + Float.toString(orientationAngles[1]) +"Z-angle " + Float.toString(orientationAngles[2]);
+//        Log.v("orientation", str);
+//    }
 
     protected void onPause(){
         super.onPause();
         mSensorManager.unregisterListener(this);
   //      mBluetoothAdapter.disable();
-        oel.disable();
+//        oel.disable();
     }
     private void setupChat() {
         Log.d(TAG, "setupChat()");
@@ -215,7 +194,7 @@ public class MainActivity extends Activity implements SensorEventListener{
         mOutStringBuffer = new StringBuffer("");
     }
 
-    private void sendMessage() {
+    private void sendMessage(String msg) {
         // Check that we're actually connected before trying anything
         if (mChatService.getState() != BluetoothChatService.STATE_CONNECTED) {
             Toast.makeText(this, "not connected", Toast.LENGTH_SHORT).show();
@@ -223,7 +202,7 @@ public class MainActivity extends Activity implements SensorEventListener{
         }
 
         // Check that there's actually something to send
-        mChatService.write("Test".getBytes());
+        mChatService.write(msg.getBytes());
 
 
     }
@@ -239,7 +218,7 @@ public class MainActivity extends Activity implements SensorEventListener{
                     if(D) Log.i(TAG, "MESSAGE_STATE_CHANGE: " + msg.arg1);
                     switch (msg.arg1) {
                         case BluetoothChatService.STATE_CONNECTED:
-                            setStatus(getString(R.string.title_connected_to, mConnectedDeviceName));
+                            setStatus("connected to sth");
                             break;
                         case BluetoothChatService.STATE_CONNECTING:
                             setStatus("connecting");
