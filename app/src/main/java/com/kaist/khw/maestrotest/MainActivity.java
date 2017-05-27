@@ -30,8 +30,9 @@ import android.widget.Toast;
 public class MainActivity extends Activity implements SensorEventListener{
 
     private TextView mTextView;
-    private Button mSettingButton;
-    private Button mSendButton;
+    private Button mInsecureSettingButton;
+    private Button mDisconnectButton;
+    private Button mSecureSettingButton;
     private SensorManager mSensorManager;
     private Sensor mSensor;//, mAccSensor, mMagSensor, mRotVecSensor;
 //    private final float[] rotationMatrix = new float[9];
@@ -84,31 +85,32 @@ public class MainActivity extends Activity implements SensorEventListener{
         stub.setOnLayoutInflatedListener(new WatchViewStub.OnLayoutInflatedListener() {
             @Override
             public void onLayoutInflated(WatchViewStub stub) {
+
                 mTextView = (TextView) stub.findViewById(R.id.text);
-                mSettingButton = (Button)findViewById(R.id.bluetooth_active);
-                mSettingButton.setOnClickListener(new OnClickListener() {
+                mInsecureSettingButton = (Button)findViewById(R.id.Insecure_button);
+                mInsecureSettingButton.setOnClickListener(new OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        if (!mBluetoothAdapter.isEnabled()) {
-                            Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                            startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
-                            // Otherwise, setup the chat session
-                        } else {
-                            if (mChatService == null) setupChat();
-                        }
-                        ensureDiscoverable();
+                        Intent serverIntent = new Intent(v.getContext(), DeviceListActivity.class);
+                        startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_INSECURE);
+
+                    }
+                });
+                mSecureSettingButton = (Button)findViewById(R.id.secure_button);
+                mSecureSettingButton.setOnClickListener(new OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
                         Intent serverIntent = new Intent(v.getContext(), DeviceListActivity.class);
                         startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_SECURE);
 
 
                     }
                 });
-                mSendButton = (Button)findViewById(R.id.send_message);
-                mSendButton.setOnClickListener(new OnClickListener() {
+                mDisconnectButton = (Button)findViewById(R.id.disconnect_button);
+                mDisconnectButton.setOnClickListener(new OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        sendMessage("Fuck");
-
+                        ensureDiscoverable();
                     }
                 });
 
@@ -185,6 +187,22 @@ public class MainActivity extends Activity implements SensorEventListener{
   //      mBluetoothAdapter.disable();
 //        oel.disable();
     }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (!mBluetoothAdapter.isEnabled()) {
+            Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
+            // Otherwise, setup the chat session
+        } else {
+            if (mChatService == null) setupChat();
+        }
+
+
+
+    }
+
     private void setupChat() {
         Log.d(TAG, "setupChat()");
 

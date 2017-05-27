@@ -21,18 +21,25 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal">
             <Button
-                android:id="@+id/bluetooth_active"
+                android:id="@+id/Insecure_button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="setting">
+                android:text="insecure">
             </Button>
             <Button
-                android:id="@+id/send_message"
+                android:id="@+id/secure_button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="send">
+                android:text="secure">
+            </Button>
+            <Button
+                android:id="@+id/disconnect_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="discov">
             </Button>
         </LinearLayout>
 
