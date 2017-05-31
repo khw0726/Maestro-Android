@@ -12,6 +12,7 @@ import android.hardware.SensorEventListener;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.wearable.activity.WearableActivity;
 import android.support.wearable.view.ConfirmationOverlay;
 import android.support.wearable.view.WatchViewStub;
 import android.util.Log;
@@ -27,21 +28,21 @@ import android.hardware.SensorManager;
 import android.widget.Toast;
 
 
-public class MainActivity extends Activity implements SensorEventListener{
+public class MainActivity extends WearableActivity implements SensorEventListener{
 
     private TextView mTextView;
     private Button mInsecureSettingButton;
     private Button mDisconnectButton;
     private Button mSecureSettingButton;
     private SensorManager mSensorManager;
-    private Sensor mSensor;//, mAccSensor, mMagSensor, mRotVecSensor;
-//    private final float[] rotationMatrix = new float[9];
-//    private final float[] orientationAngles = new float[3];
-//    private final float[] accelerometerReading = new float[3];
-//    private final float[] magnetometerReading = new float[3];
-
-    private int angle;
-    private boolean isSwipe = false;
+    private Sensor mSensor;
+    private boolean isPointer;
+    private double dY, dZ;
+    private double vY, vZ;
+    private long timestamp;
+    private int isSwipe = 0;
+    private int isYAcc = 0;
+    private int isZAcc = 0;
     private OrientationEventListener oel;
 
     /* Bluetooh Setting */
@@ -80,6 +81,7 @@ public class MainActivity extends Activity implements SensorEventListener{
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+//        setAmbientEnabled();
 
         final WatchViewStub stub = (WatchViewStub) findViewById(R.id.watch_view_stub);
         stub.setOnLayoutInflatedListener(new WatchViewStub.OnLayoutInflatedListener() {
@@ -144,6 +146,12 @@ public class MainActivity extends Activity implements SensorEventListener{
         super.onResume();
  //       mBluetoothAdapter.enable();
         mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
+        vY = 0;
+        vZ = 0;
+        dY = 0;
+        dZ = 0;
+        isSwipe = 0;
+        isPointer = false;
 //        oel.enable();
     }
     public boolean onKeyDown(int keyCode, KeyEvent event) {
@@ -151,10 +159,28 @@ public class MainActivity extends Activity implements SensorEventListener{
             case KeyEvent.KEYCODE_NAVIGATE_NEXT:
                 // Do something that advances a user View to the next item in an ordered list.
                 Log.v("fuckk","nextt");
+                sendMessage(3);
+                if(!isPointer){
+                    mSensorManager.unregisterListener(this);
+                    mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_GAME);
+                } else {
+                    mSensorManager.unregisterListener(this);
+                    mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
+                }
+
+                vY = 0;
+                vZ = 0;
+                dY = 0;
+                dZ = 0;
+                timestamp = System.nanoTime();
+                isPointer = !isPointer;
+
                 return true;
             case KeyEvent.KEYCODE_NAVIGATE_PREVIOUS:
                 // Do something that advances a user View to the previous item in an ordered list.
                 Log.v("fuckk","previous ");
+                sendMessage(4);
+                isPointer = false;
                 return true;
         }
         // If you did not handle it, let it be handled by the next possible element as deemed by the Activity.
@@ -167,11 +193,127 @@ public class MainActivity extends Activity implements SensorEventListener{
     @Override
     public final void onSensorChanged(SensorEvent ev){
         if(ev.sensor == mSensor) {
-            if(Math.abs(ev.values[2]) > 5) {
-                String str = "X-axis" + Float.toString(ev.values[0]) + "\nY-axis" + Float.toString(ev.values[1]) + "\nZ-axis" + Float.toString(ev.values[2]);
-                sendMessage(str);
-                Log.v("Fuck you", str);
+            double aY = Math.round(ev.values[1] * 100d) / 100d;
+            double aZ = Math.round(ev.values[2] * 100d) / 100d;
+            if(isPointer){
+                long elaspedTime = (ev.timestamp - timestamp);
+                Log.v("time", Double.toString(elaspedTime));
+                timestamp = ev.timestamp;
+                vY += aY * elaspedTime;
+                vZ += aZ * elaspedTime;
+
+                dY = vY * elaspedTime;
+                dZ = vZ * elaspedTime;
+                if(Math.abs(aZ) > 1){
+                    if(aZ > 0){
+                        if(isZAcc == 0){
+                            isZAcc = 1;
+                        } else if(isZAcc == 1){
+                            isZAcc = 1;
+                        } else if(isZAcc == -1){
+                            isZAcc = 2;
+                            aZ = 0;
+                        } else if(isZAcc == 2){
+                            aZ = 0;
+                        }
+                    } else {
+                        if(isZAcc == 0){
+                            isZAcc = -1;
+                        } else if(isZAcc == -1){
+                            isZAcc = -1;
+                        } else if(isZAcc == 1){
+                            isZAcc = 2;
+                            aZ = 0;
+                        } else if(isZAcc == 2){
+                            aZ = 0;
+                        }
+                    }
+                } else {
+                    aZ = 0;
+                    if(isZAcc == 2) {
+                        isZAcc = 0;
+                    }
+                }
+                if(Math.abs(aY) > 1){
+                    if(aY > 0){
+                        if(isYAcc == 0){
+                            isYAcc = 1;
+                        } else if(isYAcc == 1){
+                            isYAcc = 1;
+                        } else if(isYAcc == -1){
+                            isYAcc = 2;
+                            aY = 0;
+                        } else if(isYAcc == 2){
+                            aY = 0;
+                        }
+                    } else {
+                        if(isYAcc == 0){
+                            isYAcc = -1;
+                        } else if(isYAcc == -1){
+                            isYAcc = -1;
+                        } else if(isYAcc == 1){
+                            isYAcc = 2;
+                            aY = 0;
+                        } else if(isYAcc == 2){
+                            aY = 0;
+                        }
+                    }
+                } else {
+                    aY = 0;
+                    if(isYAcc == 2){
+                        isYAcc = 0;
+                    }
+                }
+//                if(aZ > 0 && aY > 0){
+//                    if(isZAcc == -1){
+//                        isZAcc = 2;
+//                        aZ = 0;
+//                    }
+//                    if(isYAcc == -1){
+//                        isYAcc = 2;
+//                        aY = 0;
+//                    }
+//                    sendMessage(aY, aZ, elaspedTime);
+//                }
+                sendMessage(aY, aZ, elaspedTime);
+                Log.v("ACC", "aY " + Double.toString(aY) + " aZ " + Double.toString(aZ));
+                Log.v("dT", Long.toString(elaspedTime));
+//                Log.v("velocity", "VY:" + Double.toString(vY) + "VZ:" + Double.toString(vZ));
+//                Log.v("dist", "Y:" + Double.toString(dY) + "Z:" + Double.toString(dZ));
+
+            } else {
+                if(Math.abs(ev.values[2]) > 5) {
+                    String str = "X-axis" + Float.toString(ev.values[0]) + "\nY-axis" + Float.toString(ev.values[1]) + "\nZ-axis" + Float.toString(ev.values[2]);
+                    Log.v("sensorValue", str);
+                    if(aZ > 0){
+                        if(isSwipe == 0){
+                            isSwipe = 1;
+                            sendMessage(1);
+                            Log.v("next", "next");
+                        } else if(isSwipe == 1){
+                            Log.v("next ignoreing...", "next ignoreing...");
+                        } else if(isSwipe == -1){
+                            isSwipe = 2;
+                            Log.v("Ignore next", "Ignore next");
+                        }
+                    } else {
+                        if(isSwipe == 0){
+                            isSwipe = -1;
+                            sendMessage(2);
+                            Log.v("prev", "prev");
+                        } else if (isSwipe == 1){
+                            Log.v("Ignore prev", "Ignore prev");
+                            isSwipe = 2;
+                        }
+                    }
+                } else {
+                    if(isSwipe == 2){
+                        isSwipe = 0;
+                        Log.v("Activate", "Activate");
+                    }
+                }
             }
+
         }
     }
 //    public void updateOrientationAngles(){
@@ -221,8 +363,24 @@ public class MainActivity extends Activity implements SensorEventListener{
 
         // Check that there's actually something to send
         mChatService.write(msg.getBytes());
-
-
+    }
+    private void sendMessage(double dY, double dZ, long dT){
+        if (mChatService.getState() != BluetoothChatService.STATE_CONNECTED) {
+            Toast.makeText(this, "not connected", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String str = "M" + String.valueOf(dY) + "," + String.valueOf(dZ) + "," + Long.toString(dT) + "\n";
+        mChatService.write(str.getBytes());
+    }
+    private void sendMessage(int msgCode) {
+        // Check that we're actually connected before trying anything
+        if (mChatService.getState() != BluetoothChatService.STATE_CONNECTED) {
+            Toast.makeText(this, "not connected", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String code = String.valueOf(msgCode) + "\n";
+        // Check that there's actually something to send
+        mChatService.write(code.getBytes());
     }
     private final void setStatus(CharSequence subTitle) {
 //        final ActionBar actionBar = getActionBar();
