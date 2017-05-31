@@ -37,13 +37,13 @@ public class MainActivity extends WearableActivity implements SensorEventListene
     private SensorManager mSensorManager;
     private Sensor mSensor;
     private boolean isPointer;
-    private double dY, dZ;
-    private double vY, vZ;
-    private long timestamp;
+//    private double dY, dZ;
+//    private double vY, vZ;
+//    private long timestamp;
     private int isSwipe = 0;
-    private int isYAcc = 0;
-    private int isZAcc = 0;
-    private OrientationEventListener oel;
+//    private int isYAcc = 0;
+//    private int isZAcc = 0;
+//    private OrientationEventListener oel;
 
     /* Bluetooh Setting */
     private static final String TAG = "BluetoothChat";
@@ -120,36 +120,20 @@ public class MainActivity extends WearableActivity implements SensorEventListene
         });
 
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-//        mRotSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
         mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
-//        mRotVecSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
-//        Log.v("mRotVec", mRotVecSensor == null ? "true": "false");
-//        mAccSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-//        mMagSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
 
-//        oel = new OrientationEventListener(getApplicationContext()) {
-//            @Override
-//            public void onOrientationChanged(int orientation) {
-//                Log.v("Orient", Integer.toString(orientation));
-//                angle = orientation; //(orientation == -1) ? 90 : orientation - 180;
-//            }
-//        };
 
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-
-
-
-
 
     }
     protected void onResume(){
         super.onResume();
  //       mBluetoothAdapter.enable();
         mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
-        vY = 0;
-        vZ = 0;
-        dY = 0;
-        dZ = 0;
+//        vY = 0;
+//        vZ = 0;
+//        dY = 0;
+//        dZ = 0;
         isSwipe = 0;
         isPointer = false;
 //        oel.enable();
@@ -158,29 +142,31 @@ public class MainActivity extends WearableActivity implements SensorEventListene
         switch (keyCode) {
             case KeyEvent.KEYCODE_NAVIGATE_NEXT:
                 // Do something that advances a user View to the next item in an ordered list.
-                Log.v("fuckk","nextt");
+//                Log.v("fuckk","nextt");
                 sendMessage(3);
-                if(!isPointer){
-                    mSensorManager.unregisterListener(this);
-                    mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_GAME);
-                } else {
-                    mSensorManager.unregisterListener(this);
-                    mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
-                }
+                Intent intent = new Intent(this,TouchpadActivity.class);
+                startActivity(intent);
+//                if(!isPointer){
+//                    mSensorManager.unregisterListener(this);
+//                    mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_GAME);
+//                } else {
+//                    mSensorManager.unregisterListener(this);
+//                    mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
+//                }
 
-                vY = 0;
-                vZ = 0;
-                dY = 0;
-                dZ = 0;
-                timestamp = System.nanoTime();
-                isPointer = !isPointer;
+//                vY = 0;
+//                vZ = 0;
+//                dY = 0;
+//                dZ = 0;
+//                timestamp = System.nanoTime();
+                isPointer = false;
 
                 return true;
             case KeyEvent.KEYCODE_NAVIGATE_PREVIOUS:
                 // Do something that advances a user View to the previous item in an ordered list.
                 Log.v("fuckk","previous ");
                 sendMessage(4);
-                isPointer = false;
+                isPointer = true;
                 return true;
         }
         // If you did not handle it, let it be handled by the next possible element as deemed by the Activity.
@@ -195,75 +181,75 @@ public class MainActivity extends WearableActivity implements SensorEventListene
         if(ev.sensor == mSensor) {
             double aY = Math.round(ev.values[1] * 100d) / 100d;
             double aZ = Math.round(ev.values[2] * 100d) / 100d;
-            if(isPointer){
-                long elaspedTime = (ev.timestamp - timestamp);
-                Log.v("time", Double.toString(elaspedTime));
-                timestamp = ev.timestamp;
-                vY += aY * elaspedTime;
-                vZ += aZ * elaspedTime;
-
-                dY = vY * elaspedTime;
-                dZ = vZ * elaspedTime;
-                if(Math.abs(aZ) > 1){
-                    if(aZ > 0){
-                        if(isZAcc == 0){
-                            isZAcc = 1;
-                        } else if(isZAcc == 1){
-                            isZAcc = 1;
-                        } else if(isZAcc == -1){
-                            isZAcc = 2;
-                            aZ = 0;
-                        } else if(isZAcc == 2){
-                            aZ = 0;
-                        }
-                    } else {
-                        if(isZAcc == 0){
-                            isZAcc = -1;
-                        } else if(isZAcc == -1){
-                            isZAcc = -1;
-                        } else if(isZAcc == 1){
-                            isZAcc = 2;
-                            aZ = 0;
-                        } else if(isZAcc == 2){
-                            aZ = 0;
-                        }
-                    }
-                } else {
-                    aZ = 0;
-                    if(isZAcc == 2) {
-                        isZAcc = 0;
-                    }
-                }
-                if(Math.abs(aY) > 1){
-                    if(aY > 0){
-                        if(isYAcc == 0){
-                            isYAcc = 1;
-                        } else if(isYAcc == 1){
-                            isYAcc = 1;
-                        } else if(isYAcc == -1){
-                            isYAcc = 2;
-                            aY = 0;
-                        } else if(isYAcc == 2){
-                            aY = 0;
-                        }
-                    } else {
-                        if(isYAcc == 0){
-                            isYAcc = -1;
-                        } else if(isYAcc == -1){
-                            isYAcc = -1;
-                        } else if(isYAcc == 1){
-                            isYAcc = 2;
-                            aY = 0;
-                        } else if(isYAcc == 2){
-                            aY = 0;
-                        }
-                    }
-                } else {
-                    aY = 0;
-                    if(isYAcc == 2){
-                        isYAcc = 0;
-                    }
-                }
+//            if(isPointer){
+//                long elaspedTime = (ev.timestamp - timestamp);
+//                Log.v("time", Double.toString(elaspedTime));
+//                timestamp = ev.timestamp;
+//                vY += aY * elaspedTime;
+//                vZ += aZ * elaspedTime;
+//
+//                dY = vY * elaspedTime;
+//                dZ = vZ * elaspedTime;
+//                if(Math.abs(aZ) > 1){
+//                    if(aZ > 0){
+//                        if(isZAcc == 0){
+//                            isZAcc = 1;
+//                        } else if(isZAcc == 1){
+//                            isZAcc = 1;
+//                        } else if(isZAcc == -1){
+//                            isZAcc = 2;
+//                            aZ = 0;
+//                        } else if(isZAcc == 2){
+//                            aZ = 0;
+//                        }
+//                    } else {
+//                        if(isZAcc == 0){
+//                            isZAcc = -1;
+//                        } else if(isZAcc == -1){
+//                            isZAcc = -1;
+//                        } else if(isZAcc == 1){
+//                            isZAcc = 2;
+//                            aZ = 0;
+//                        } else if(isZAcc == 2){
+//                            aZ = 0;
+//                        }
+//                    }
+//                } else {
+//                    if(isZAcc == 2) {
+//                        isZAcc = 0;
+//                        aZ = 0;
+//                    }
+//                }
+//                if(Math.abs(aY) > 1){
+//                    if(aY > 0){
+//                        if(isYAcc == 0){
+//                            isYAcc = 1;
+//                        } else if(isYAcc == 1){
+//                            isYAcc = 1;
+//                        } else if(isYAcc == -1){
+//                            isYAcc = 2;
+//                            aY = 0;
+//                        } else if(isYAcc == 2){
+//                            aY = 0;
+//                        }
+//                    } else {
+//                        if(isYAcc == 0){
+//                            isYAcc = -1;
+//                        } else if(isYAcc == -1){
+//                            isYAcc = -1;
+//                        } else if(isYAcc == 1){
+//                            isYAcc = 2;
+//                            aY = 0;
+//                        } else if(isYAcc == 2){
+//                            aY = 0;
+//                        }
+//                    }
+//                } else {
+//                    if(isYAcc == 2){
+//                        aY = 0;
+//                        isYAcc = 0;
+//                    }
+//                }
 //                if(aZ > 0 && aY > 0){
 //                    if(isZAcc == -1){
 //                        isZAcc = 2;
@@ -275,44 +261,44 @@ public class MainActivity extends WearableActivity implements SensorEventListene
 //                    }
 //                    sendMessage(aY, aZ, elaspedTime);
 //                }
-                sendMessage(aY, aZ, elaspedTime);
-                Log.v("ACC", "aY " + Double.toString(aY) + " aZ " + Double.toString(aZ));
-                Log.v("dT", Long.toString(elaspedTime));
-//                Log.v("velocity", "VY:" + Double.toString(vY) + "VZ:" + Double.toString(vZ));
-//                Log.v("dist", "Y:" + Double.toString(dY) + "Z:" + Double.toString(dZ));
+//                sendMessage(aY, aZ, elaspedTime);
+//                Log.v("ACC", "aY " + Double.toString(aY) + " aZ " + Double.toString(aZ));
+//                Log.v("dT", Long.toString(elaspedTime));
+////                Log.v("velocity", "VY:" + Double.toString(vY) + "VZ:" + Double.toString(vZ));
+////                Log.v("dist", "Y:" + Double.toString(dY) + "Z:" + Double.toString(dZ));
 
-            } else {
-                if(Math.abs(ev.values[2]) > 5) {
-                    String str = "X-axis" + Float.toString(ev.values[0]) + "\nY-axis" + Float.toString(ev.values[1]) + "\nZ-axis" + Float.toString(ev.values[2]);
-                    Log.v("sensorValue", str);
-                    if(aZ > 0){
-                        if(isSwipe == 0){
-                            isSwipe = 1;
-                            sendMessage(1);
-                            Log.v("next", "next");
-                        } else if(isSwipe == 1){
-                            Log.v("next ignoreing...", "next ignoreing...");
-                        } else if(isSwipe == -1){
-                            isSwipe = 2;
-                            Log.v("Ignore next", "Ignore next");
-                        }
-                    } else {
-                        if(isSwipe == 0){
-                            isSwipe = -1;
-                            sendMessage(2);
-                            Log.v("prev", "prev");
-                        } else if (isSwipe == 1){
-                            Log.v("Ignore prev", "Ignore prev");
-                            isSwipe = 2;
-                        }
+//            } else {
+            if(Math.abs(ev.values[2]) > 5) {
+                String str = "X-axis" + Float.toString(ev.values[0]) + "\nY-axis" + Float.toString(ev.values[1]) + "\nZ-axis" + Float.toString(ev.values[2]);
+                Log.v("sensorValue", str);
+                if(aZ > 0){
+                    if(isSwipe == 0){
+                        isSwipe = 1;
+                        sendMessage(1);
+                        Log.v("next", "next");
+                    } else if(isSwipe == 1){
+                        Log.v("next ignoreing...", "next ignoreing...");
+                    } else if(isSwipe == -1){
+                        isSwipe = 2;
+                        Log.v("Ignore next", "Ignore next");
                     }
                 } else {
-                    if(isSwipe == 2){
-                        isSwipe = 0;
-                        Log.v("Activate", "Activate");
+                    if(isSwipe == 0){
+                        isSwipe = -1;
+                        sendMessage(2);
+                        Log.v("prev", "prev");
+                    } else if (isSwipe == 1){
+                        Log.v("Ignore prev", "Ignore prev");
+                        isSwipe = 2;
                     }
                 }
+            } else {
+                if(isSwipe == 2){
+                    isSwipe = 0;
+                    Log.v("Activate", "Activate");
+                }
             }
+//            }
 
         }
     }
