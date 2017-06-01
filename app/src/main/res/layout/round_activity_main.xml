@@ -6,42 +6,44 @@
     tools:context="com.kaist.khw.maestrotest.MainActivity"
     tools:deviceIds="wear_round">
     <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/touchboard2"
         android:layout_centerHorizontal="true"
         android:layout_centerVertical="true"
+        android:gravity="center"
         android:orientation="vertical">
-        <TextView
-            android:id="@+id/text"
+        <android.support.wearable.view.BoxInsetLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/hello_round" />
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-            <Button
-                android:id="@+id/Insecure_button"
+            android:layout_gravity="center_horizontal"
+            >
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="insecure">
-            </Button>
-            <Button
-                android:id="@+id/secure_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="secure">
-            </Button>
-            <Button
-                android:id="@+id/disconnect_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="discov">
-            </Button>
-        </LinearLayout>
+                android:layout_centerVertical="true"
+                android:layout_centerHorizontal="true">
+                <Button
+                    android:id="@+id/Insecure_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_centerHorizontal="true"
+                    android:layout_centerVertical="true"
+                    android:text="insecure">
+                </Button>
+
+                <Button
+                    android:id="@+id/start_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_centerHorizontal="true"
+                    android:layout_centerVertical="true"
+                    android:text="start">
+                </Button>
+            </LinearLayout>
+        </android.support.wearable.view.BoxInsetLayout>
 
     </LinearLayout>
 </RelativeLayout>

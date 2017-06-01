@@ -12,16 +12,21 @@ import android.hardware.SensorEventListener;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.v4.view.GestureDetectorCompat;
+import android.support.v4.view.MotionEventCompat;
 import android.support.wearable.activity.WearableActivity;
 import android.support.wearable.view.ConfirmationOverlay;
 import android.support.wearable.view.WatchViewStub;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.OrientationEventListener;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
@@ -30,20 +35,24 @@ import android.widget.Toast;
 
 public class MainActivity extends WearableActivity implements SensorEventListener{
 
-    private TextView mTextView;
+    /* Layout and filters */
+    private LinearLayout mTouchBoard;
     private Button mInsecureSettingButton;
-    private Button mDisconnectButton;
-    private Button mSecureSettingButton;
+    private Button mStartButton;
     private SensorManager mSensorManager;
     private Sensor mSensor;
-    private boolean isPointer;
-//    private double dY, dZ;
-//    private double vY, vZ;
-//    private long timestamp;
+    private GestureDetector mDetector;
+
+    /*Internal States*/
+    private int touchpadMode;
     private int isSwipe = 0;
-//    private int isYAcc = 0;
-//    private int isZAcc = 0;
-//    private OrientationEventListener oel;
+    /* Consts for internal state*/
+    private static final int CONNECTION = 1;
+    private static final int START= 2;
+    private static final int TOUCHPAD = 3;
+    private static final int POINTER = 4;
+    private static final int PEN = 5;
+
 
     /* Bluetooh Setting */
     private static final String TAG = "BluetoothChat";
@@ -88,7 +97,9 @@ public class MainActivity extends WearableActivity implements SensorEventListene
             @Override
             public void onLayoutInflated(WatchViewStub stub) {
 
-                mTextView = (TextView) stub.findViewById(R.id.text);
+                mTouchBoard = (LinearLayout)stub.findViewById(R.id.touchboard2);
+                mDetector = new GestureDetector(mTouchBoard.getContext(), new MyGestureListener());
+
                 mInsecureSettingButton = (Button)findViewById(R.id.Insecure_button);
                 mInsecureSettingButton.setOnClickListener(new OnClickListener() {
                     @Override
@@ -98,21 +109,11 @@ public class MainActivity extends WearableActivity implements SensorEventListene
 
                     }
                 });
-                mSecureSettingButton = (Button)findViewById(R.id.secure_button);
-                mSecureSettingButton.setOnClickListener(new OnClickListener() {
+                mStartButton = (Button)findViewById(R.id.start_button);
+                mStartButton.setOnClickListener(new OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        Intent serverIntent = new Intent(v.getContext(), DeviceListActivity.class);
-                        startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_SECURE);
-
-
-                    }
-                });
-                mDisconnectButton = (Button)findViewById(R.id.disconnect_button);
-                mDisconnectButton.setOnClickListener(new OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        ensureDiscoverable();
+                        //send message to start presentation
                     }
                 });
 
@@ -126,50 +127,46 @@ public class MainActivity extends WearableActivity implements SensorEventListene
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
     }
+    class MyGestureListener extends GestureDetector.SimpleOnGestureListener{
+        @Override
+        public boolean onDown(MotionEvent ev){
+            return true;
+        }
+        @Override
+        public boolean onSingleTapUp(MotionEvent ev){
+            //send message for click
+            Log.d("MyGestureListener", "Single Tap");
+            return true;
+        }
+        @Override
+        public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY){
+            sendMessage(distanceX, distanceY);
+            Log.d("MyGestureListener", Double.toString(distanceX) + " " + Double.toString(distanceY));
+            return true;
+        }
+    }
     protected void onResume(){
         super.onResume();
  //       mBluetoothAdapter.enable();
         mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
-//        vY = 0;
-//        vZ = 0;
-//        dY = 0;
-//        dZ = 0;
         isSwipe = 0;
-        isPointer = false;
-//        oel.enable();
     }
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         switch (keyCode) {
             case KeyEvent.KEYCODE_NAVIGATE_NEXT:
                 // Do something that advances a user View to the next item in an ordered list.
-//                Log.v("fuckk","nextt");
+                setTouchBoard();
                 sendMessage(3);
-                Intent intent = new Intent(this,TouchpadActivity.class);
-                startActivity(intent);
-//                if(!isPointer){
-//                    mSensorManager.unregisterListener(this);
-//                    mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_GAME);
-//                } else {
-//                    mSensorManager.unregisterListener(this);
-//                    mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
-//                }
-
-//                vY = 0;
-//                vZ = 0;
-//                dY = 0;
-//                dZ = 0;
-//                timestamp = System.nanoTime();
-                isPointer = false;
 
                 return true;
             case KeyEvent.KEYCODE_NAVIGATE_PREVIOUS:
                 // Do something that advances a user View to the previous item in an ordered list.
                 Log.v("fuckk","previous ");
                 sendMessage(4);
-                isPointer = true;
                 return true;
         }
         // If you did not handle it, let it be handled by the next possible element as deemed by the Activity.
+        Log.v("keycode..?", Integer.toString(keyCode));
         return super.onKeyDown(keyCode, event);
     }
     @Override
@@ -179,95 +176,9 @@ public class MainActivity extends WearableActivity implements SensorEventListene
     @Override
     public final void onSensorChanged(SensorEvent ev){
         if(ev.sensor == mSensor) {
-            double aY = Math.round(ev.values[1] * 100d) / 100d;
+//            double aY = Math.round(ev.values[1] * 100d) / 100d;
             double aZ = Math.round(ev.values[2] * 100d) / 100d;
-//            if(isPointer){
-//                long elaspedTime = (ev.timestamp - timestamp);
-//                Log.v("time", Double.toString(elaspedTime));
-//                timestamp = ev.timestamp;
-//                vY += aY * elaspedTime;
-//                vZ += aZ * elaspedTime;
-//
-//                dY = vY * elaspedTime;
-//                dZ = vZ * elaspedTime;
-//                if(Math.abs(aZ) > 1){
-//                    if(aZ > 0){
-//                        if(isZAcc == 0){
-//                            isZAcc = 1;
-//                        } else if(isZAcc == 1){
-//                            isZAcc = 1;
-//                        } else if(isZAcc == -1){
-//                            isZAcc = 2;
-//                            aZ = 0;
-//                        } else if(isZAcc == 2){
-//                            aZ = 0;
-//                        }
-//                    } else {
-//                        if(isZAcc == 0){
-//                            isZAcc = -1;
-//                        } else if(isZAcc == -1){
-//                            isZAcc = -1;
-//                        } else if(isZAcc == 1){
-//                            isZAcc = 2;
-//                            aZ = 0;
-//                        } else if(isZAcc == 2){
-//                            aZ = 0;
-//                        }
-//                    }
-//                } else {
-//                    if(isZAcc == 2) {
-//                        isZAcc = 0;
-//                        aZ = 0;
-//                    }
-//                }
-//                if(Math.abs(aY) > 1){
-//                    if(aY > 0){
-//                        if(isYAcc == 0){
-//                            isYAcc = 1;
-//                        } else if(isYAcc == 1){
-//                            isYAcc = 1;
-//                        } else if(isYAcc == -1){
-//                            isYAcc = 2;
-//                            aY = 0;
-//                        } else if(isYAcc == 2){
-//                            aY = 0;
-//                        }
-//                    } else {
-//                        if(isYAcc == 0){
-//                            isYAcc = -1;
-//                        } else if(isYAcc == -1){
-//                            isYAcc = -1;
-//                        } else if(isYAcc == 1){
-//                            isYAcc = 2;
-//                            aY = 0;
-//                        } else if(isYAcc == 2){
-//                            aY = 0;
-//                        }
-//                    }
-//                } else {
-//                    if(isYAcc == 2){
-//                        aY = 0;
-//                        isYAcc = 0;
-//                    }
-//                }
-//                if(aZ > 0 && aY > 0){
-//                    if(isZAcc == -1){
-//                        isZAcc = 2;
-//                        aZ = 0;
-//                    }
-//                    if(isYAcc == -1){
-//                        isYAcc = 2;
-//                        aY = 0;
-//                    }
-//                    sendMessage(aY, aZ, elaspedTime);
-//                }
-//                sendMessage(aY, aZ, elaspedTime);
-//                Log.v("ACC", "aY " + Double.toString(aY) + " aZ " + Double.toString(aZ));
-//                Log.v("dT", Long.toString(elaspedTime));
-////                Log.v("velocity", "VY:" + Double.toString(vY) + "VZ:" + Double.toString(vZ));
-////                Log.v("dist", "Y:" + Double.toString(dY) + "Z:" + Double.toString(dZ));
 
-//            } else {
             if(Math.abs(ev.values[2]) > 5) {
                 String str = "X-axis" + Float.toString(ev.values[0]) + "\nY-axis" + Float.toString(ev.values[1]) + "\nZ-axis" + Float.toString(ev.values[2]);
                 Log.v("sensorValue", str);
@@ -298,22 +209,13 @@ public class MainActivity extends WearableActivity implements SensorEventListene
                     Log.v("Activate", "Activate");
                 }
             }
-//            }
-
         }
     }
-//    public void updateOrientationAngles(){
-////        mSensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReading, magnetometerReading);
-////        mSensorManager.getOrientation(rotationMatrix, orientationAngles);
-//        String str = "X-angle " + Float.toString(orientationAngles[0]) + "Y-angle " + Float.toString(orientationAngles[1]) +"Z-angle " + Float.toString(orientationAngles[2]);
-//        Log.v("orientation", str);
-//    }
 
     protected void onPause(){
         super.onPause();
         mSensorManager.unregisterListener(this);
   //      mBluetoothAdapter.disable();
-//        oel.disable();
     }
 
     @Override
@@ -326,9 +228,6 @@ public class MainActivity extends WearableActivity implements SensorEventListene
         } else {
             if (mChatService == null) setupChat();
         }
-
-
-
     }
 
     private void setupChat() {
@@ -350,12 +249,12 @@ public class MainActivity extends WearableActivity implements SensorEventListene
         // Check that there's actually something to send
         mChatService.write(msg.getBytes());
     }
-    private void sendMessage(double dY, double dZ, long dT){
+    private void sendMessage(double dX, double dY){
         if (mChatService.getState() != BluetoothChatService.STATE_CONNECTED) {
             Toast.makeText(this, "not connected", Toast.LENGTH_SHORT).show();
             return;
         }
-        String str = "M" + String.valueOf(dY) + "," + String.valueOf(dZ) + "," + Long.toString(dT) + "\n";
+        String str = "M" + String.valueOf(dX) + "," + String.valueOf(dY) + "\n";
         mChatService.write(str.getBytes());
     }
     private void sendMessage(int msgCode) {
@@ -436,6 +335,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
                 if (resultCode == Activity.RESULT_OK) {
                     connectDevice(data, false);
                 }
+                mInsecureSettingButton.setVisibility(View.GONE);
                 break;
             case REQUEST_ENABLE_BT:
                 // When the request to enable Bluetooth returns
@@ -472,6 +372,43 @@ public class MainActivity extends WearableActivity implements SensorEventListene
         }
     }
 
+    public void setTouchBoard()
+    {
+        mTouchBoard.setOnTouchListener(new View.OnTouchListener()
+           {
+               @Override
+               public boolean onTouch(View v, MotionEvent event) {
+                   mDetector.onTouchEvent(event);
+//                           return v.onTouchEvent(event);
+                   return true;
+               }
+           }
+        );
+    }
+
+//    public boolean onBoardTouchEvent(MotionEvent ev){
+//        int action = MotionEventCompat.getActionMasked(ev);
+//
+//        switch (action){
+//            case (MotionEvent.ACTION_DOWN) :
+//                Log.d("touchpad","Action was DOWN");
+//                return true;
+//
+//            case MotionEvent.ACTION_MOVE:
+//                Log.d("Touchpad", Float.toString(ev.getX()) + Float.toString(ev.getY()));
+//                if(ev.getHistorySize() != 0) {
+//                    int numLastHistory = ev.getHistorySize() - 1;
+//                    double diffX = ev.getX() - ev.getHistoricalX(numLastHistory);
+//                    double diffY = ev.getY() - ev.getHistoricalY(numLastHistory);
+//                    sendMessage(diffX, diffY);
+//                } else {
+//                    sendMessage(ev.getX(), ev.getY());
+//                }
+//                return true;
+//            default:
+//                return super.onTouchEvent(ev);
+//        }
+//    }
 
 
 }
