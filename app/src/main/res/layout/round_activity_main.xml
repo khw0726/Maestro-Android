@@ -18,6 +18,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             >
+
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -42,6 +43,21 @@
                     android:layout_centerVertical="true"
                     android:text="start">
                 </Button>
+                <Button
+                    android:id="@+id/exit_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Exit"/>
+                <TextView
+                    android:id="@+id/timer_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_centerHorizontal="true"
+                    android:layout_centerVertical="true"
+                    android:visibility="invisible">
+                </TextView>
             </LinearLayout>
         </android.support.wearable.view.BoxInsetLayout>
 

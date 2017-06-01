@@ -17,6 +17,7 @@ import android.support.v4.view.MotionEventCompat;
 import android.support.wearable.activity.WearableActivity;
 import android.support.wearable.view.ConfirmationOverlay;
 import android.support.wearable.view.WatchViewStub;
+import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.KeyEvent;
@@ -24,6 +25,7 @@ import android.view.MotionEvent;
 import android.view.OrientationEventListener;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -32,6 +34,9 @@ import android.hardware.Sensor;
 import android.hardware.SensorManager;
 import android.widget.Toast;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 
 public class MainActivity extends WearableActivity implements SensorEventListener{
 
@@ -39,19 +44,26 @@ public class MainActivity extends WearableActivity implements SensorEventListene
     private LinearLayout mTouchBoard;
     private Button mInsecureSettingButton;
     private Button mStartButton;
+    private Button mExitButton;
+    private TextView mTimerView;
     private SensorManager mSensorManager;
     private Sensor mSensor;
     private GestureDetector mDetector;
+    private TimerTask updateTimerText;
+    private Timer mTimer;
+    long elaspedSecond;
 
     /*Internal States*/
     private int touchpadMode;
     private int isSwipe = 0;
+    private boolean isScrolling = false;
     /* Consts for internal state*/
     private static final int CONNECTION = 1;
     private static final int START= 2;
     private static final int TOUCHPAD = 3;
     private static final int POINTER = 4;
     private static final int PEN = 5;
+    private static final int TIMER = 6;
 
 
     /* Bluetooh Setting */
@@ -100,6 +112,9 @@ public class MainActivity extends WearableActivity implements SensorEventListene
                 mTouchBoard = (LinearLayout)stub.findViewById(R.id.touchboard2);
                 mDetector = new GestureDetector(mTouchBoard.getContext(), new MyGestureListener());
 
+                mTimerView = (TextView) findViewById(R.id.timer_text);
+                mTimerView.setVisibility(View.GONE);
+
                 mInsecureSettingButton = (Button)findViewById(R.id.Insecure_button);
                 mInsecureSettingButton.setOnClickListener(new OnClickListener() {
                     @Override
@@ -109,17 +124,50 @@ public class MainActivity extends WearableActivity implements SensorEventListene
 
                     }
                 });
+
+                mExitButton = (Button)findViewById(R.id.exit_button);
+                mExitButton.setOnClickListener(new OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        finish();
+                    }
+                });
                 mStartButton = (Button)findViewById(R.id.start_button);
                 mStartButton.setOnClickListener(new OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         //send message to start presentation
+                        mTimerView.setVisibility(View.VISIBLE);
+                        mStartButton.setVisibility(View.GONE);
+                        mInsecureSettingButton.setVisibility(View.GONE);
+                        mExitButton.setVisibility(View.GONE);
+                        touchpadMode = TIMER;
+                        elaspedSecond = 0;
+                        mTimer.schedule(updateTimerText, 0, 1000);
                     }
                 });
+                mStartButton.setVisibility(View.GONE);
+
 
             }
         });
+        touchpadMode = 1;
 
+        mTimer = new Timer();
+        updateTimerText = new TimerTask() {
+            @Override
+            public void run() {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        elaspedSecond += 1;
+                        String timeStr = DateUtils.formatElapsedTime(elaspedSecond);
+                        mTimerView.setText(timeStr);
+                    }
+                });
+            }
+        };
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
 
@@ -140,10 +188,35 @@ public class MainActivity extends WearableActivity implements SensorEventListene
         }
         @Override
         public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY){
+            isScrolling = true;
             sendMessage(distanceX, distanceY);
             Log.d("MyGestureListener", Double.toString(distanceX) + " " + Double.toString(distanceY));
             return true;
         }
+
+        public boolean onDoubleTap(MotionEvent ev){
+            switch(touchpadMode) {
+                case 4:
+                    isScrolling = false;
+                case 3:
+                    touchpadMode++;
+                    break;
+                case 5:
+                    touchpadMode = 3;
+                    break;
+                default:
+                    //Should not be here
+                    return true;
+            }
+            sendMessage(touchpadMode);
+            return true;
+        }
+
+        @Override
+        public void onLongPress(MotionEvent ev){
+            finish();
+        }
+
     }
     protected void onResume(){
         super.onResume();
@@ -155,14 +228,19 @@ public class MainActivity extends WearableActivity implements SensorEventListene
         switch (keyCode) {
             case KeyEvent.KEYCODE_NAVIGATE_NEXT:
                 // Do something that advances a user View to the next item in an ordered list.
-                setTouchBoard();
-                sendMessage(3);
-
+                sendMessage(6);
+                mTimerView.setVisibility(View.VISIBLE);
+                touchpadMode = 6;
                 return true;
             case KeyEvent.KEYCODE_NAVIGATE_PREVIOUS:
                 // Do something that advances a user View to the previous item in an ordered list.
-                Log.v("fuckk","previous ");
-                sendMessage(4);
+//                Log.v("fuckk","previous ");
+                if(touchpadMode == 6){
+                    setTouchBoard();
+                    mTimerView.setVisibility(View.GONE);
+                    touchpadMode = 3;
+                    sendMessage(3);
+                }
                 return true;
         }
         // If you did not handle it, let it be handled by the next possible element as deemed by the Activity.
@@ -216,6 +294,12 @@ public class MainActivity extends WearableActivity implements SensorEventListene
         super.onPause();
         mSensorManager.unregisterListener(this);
   //      mBluetoothAdapter.disable();
+    }
+
+    protected void onDestroy(){
+        super.onDestroy();
+        sendMessage("D");
+        mChatService.stop();
     }
 
     @Override
@@ -334,8 +418,10 @@ public class MainActivity extends WearableActivity implements SensorEventListene
                 // When DeviceListActivity returns with a device to connect
                 if (resultCode == Activity.RESULT_OK) {
                     connectDevice(data, false);
+                    mInsecureSettingButton.setVisibility(View.GONE);
+                    mStartButton.setVisibility(View.VISIBLE);
+                    touchpadMode = START;
                 }
-                mInsecureSettingButton.setVisibility(View.GONE);
                 break;
             case REQUEST_ENABLE_BT:
                 // When the request to enable Bluetooth returns
@@ -378,37 +464,21 @@ public class MainActivity extends WearableActivity implements SensorEventListene
            {
                @Override
                public boolean onTouch(View v, MotionEvent event) {
-                   mDetector.onTouchEvent(event);
-//                           return v.onTouchEvent(event);
-                   return true;
+                   if(mDetector.onTouchEvent(event)){
+                       return true;
+                   }
+                   if(touchpadMode == 5 && event.getAction() == MotionEvent.ACTION_UP) {
+                       if(isScrolling) {
+                           isScrolling  = false;
+                           sendMessage("S");
+                       }
+                   }
+                   return false;
                }
            }
         );
     }
 
-//    public boolean onBoardTouchEvent(MotionEvent ev){
-//        int action = MotionEventCompat.getActionMasked(ev);
-//
-//        switch (action){
-//            case (MotionEvent.ACTION_DOWN) :
-//                Log.d("touchpad","Action was DOWN");
-//                return true;
-//
-//            case MotionEvent.ACTION_MOVE:
-//                Log.d("Touchpad", Float.toString(ev.getX()) + Float.toString(ev.getY()));
-//                if(ev.getHistorySize() != 0) {
-//                    int numLastHistory = ev.getHistorySize() - 1;
-//                    double diffX = ev.getX() - ev.getHistoricalX(numLastHistory);
-//                    double diffY = ev.getY() - ev.getHistoricalY(numLastHistory);
-//                    sendMessage(diffX, diffY);
-//                } else {
-//                    sendMessage(ev.getX(), ev.getY());
-//                }
-//                return true;
-//            default:
-//                return super.onTouchEvent(ev);
-//        }
-//    }
 
 
 }
