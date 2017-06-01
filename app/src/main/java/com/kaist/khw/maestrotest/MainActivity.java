@@ -46,6 +46,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
     private Button mStartButton;
     private Button mExitButton;
     private TextView mTimerView;
+    private TextView mModeTextView;
     private SensorManager mSensorManager;
     private Sensor mSensor;
     private GestureDetector mDetector;
@@ -114,7 +115,8 @@ public class MainActivity extends WearableActivity implements SensorEventListene
 
                 mTimerView = (TextView) findViewById(R.id.timer_text);
                 mTimerView.setVisibility(View.GONE);
-
+                mModeTextView = (TextView) findViewById(R.id.mode_text);
+                mModeTextView.setVisibility(View.GONE);
                 mInsecureSettingButton = (Button)findViewById(R.id.Insecure_button);
                 mInsecureSettingButton.setOnClickListener(new OnClickListener() {
                     @Override
@@ -143,6 +145,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
                         mExitButton.setVisibility(View.GONE);
                         touchpadMode = TIMER;
                         elaspedSecond = 0;
+                        sendMessage("S");
                         mTimer.schedule(updateTimerText, 0, 1000);
                     }
                 });
@@ -181,9 +184,10 @@ public class MainActivity extends WearableActivity implements SensorEventListene
             return true;
         }
         @Override
-        public boolean onSingleTapUp(MotionEvent ev){
+        public boolean onSingleTapConfirmed(MotionEvent ev){
             //send message for click
             Log.d("MyGestureListener", "Single Tap");
+            sendMessage("C");
             return true;
         }
         @Override
@@ -198,10 +202,15 @@ public class MainActivity extends WearableActivity implements SensorEventListene
             switch(touchpadMode) {
                 case 4:
                     isScrolling = false;
-                case 3:
+                    mModeTextView.setText("PEN");
                     touchpadMode++;
                     break;
+                case 3:
+                    touchpadMode++;
+                    mModeTextView.setText("POINTER");
+                    break;
                 case 5:
+                    mModeTextView.setText("TOUCHPAD");
                     touchpadMode = 3;
                     break;
                 default:
@@ -228,16 +237,21 @@ public class MainActivity extends WearableActivity implements SensorEventListene
         switch (keyCode) {
             case KeyEvent.KEYCODE_NAVIGATE_NEXT:
                 // Do something that advances a user View to the next item in an ordered list.
+                mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
                 sendMessage(6);
                 mTimerView.setVisibility(View.VISIBLE);
+                mModeTextView.setVisibility(View.GONE);
                 touchpadMode = 6;
                 return true;
             case KeyEvent.KEYCODE_NAVIGATE_PREVIOUS:
                 // Do something that advances a user View to the previous item in an ordered list.
 //                Log.v("fuckk","previous ");
+                mSensorManager.unregisterListener(this);
                 if(touchpadMode == 6){
                     setTouchBoard();
                     mTimerView.setVisibility(View.GONE);
+                    mModeTextView.setVisibility(View.VISIBLE);
+                    mModeTextView.setText("TOUCHPAD");
                     touchpadMode = 3;
                     sendMessage(3);
                 }
@@ -257,7 +271,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
 //            double aY = Math.round(ev.values[1] * 100d) / 100d;
             double aZ = Math.round(ev.values[2] * 100d) / 100d;
 
-            if(Math.abs(ev.values[2]) > 5) {
+            if(Math.abs(ev.values[2]) > 7) {
                 String str = "X-axis" + Float.toString(ev.values[0]) + "\nY-axis" + Float.toString(ev.values[1]) + "\nZ-axis" + Float.toString(ev.values[2]);
                 Log.v("sensorValue", str);
                 if(aZ > 0){
@@ -329,7 +343,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
             Toast.makeText(this, "not connected", Toast.LENGTH_SHORT).show();
             return;
         }
-
+        msg += "\n";
         // Check that there's actually something to send
         mChatService.write(msg.getBytes());
     }
@@ -364,6 +378,9 @@ public class MainActivity extends WearableActivity implements SensorEventListene
                     switch (msg.arg1) {
                         case BluetoothChatService.STATE_CONNECTED:
                             setStatus("connected to sth");
+                            mInsecureSettingButton.setVisibility(View.GONE);
+                            mStartButton.setVisibility(View.VISIBLE);
+                            touchpadMode = START;
                             break;
                         case BluetoothChatService.STATE_CONNECTING:
                             setStatus("connecting");
@@ -418,9 +435,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
                 // When DeviceListActivity returns with a device to connect
                 if (resultCode == Activity.RESULT_OK) {
                     connectDevice(data, false);
-                    mInsecureSettingButton.setVisibility(View.GONE);
-                    mStartButton.setVisibility(View.VISIBLE);
-                    touchpadMode = START;
+
                 }
                 break;
             case REQUEST_ENABLE_BT:
