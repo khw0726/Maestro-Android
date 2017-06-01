@@ -187,6 +187,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
         public boolean onSingleTapConfirmed(MotionEvent ev){
             //send message for click
             Log.d("MyGestureListener", "Single Tap");
+
             sendMessage("C");
             return true;
         }
@@ -198,33 +199,68 @@ public class MainActivity extends WearableActivity implements SensorEventListene
             return true;
         }
 
+//        public boolean onDoubleTapEvent(MotionEvent ev){
+//            if(ev.getActionMasked() == MotionEvent.ACTION_UP){
+//
+////                return true;
+//            } else if(ev.getActionMasked() == MotionEvent.ACTION_MOVE){
+//                Log.v("TapandDragHistory", Integer.toString(ev.getHistorySize()));
+//                if(touchpadMode == TOUCHPAD){
+//                    isScrolling = true;
+//                    if(ev.getHistorySize() == 0) {
+//                        sendMessage("Z");
+//                        Log.d("tapanddrag", "start");
+//                    }
+//                    else {
+//                        int historySize = ev.getHistorySize() - 1;
+//                        double diffX = ev.getHistoricalX(historySize) - ev.getX();
+//                        double diffY = ev.getHistoricalY(historySize) - ev.getY();
+//                        sendMessage(diffX, diffY);
+//                        Log.d("tapanddrag", "moving");
+//                    }
+//                }
+////                return true;
+//            }
+//            return true;
+//        }
+
         public boolean onDoubleTap(MotionEvent ev){
             switch(touchpadMode) {
                 case 4:
                     isScrolling = false;
-                    mModeTextView.setText("PEN");
-                    touchpadMode++;
+                    mModeTextView.setText("TOUCHPAD");
+                    touchpadMode--;
+                    break;
+                case 5:
+                    isScrolling = false;
+                    mModeTextView.setText("TOUCHPAD");
+                    touchpadMode = 3;
                     break;
                 case 3:
                     touchpadMode++;
                     mModeTextView.setText("POINTER");
                     break;
-                case 5:
-                    mModeTextView.setText("TOUCHPAD");
-                    touchpadMode = 3;
-                    break;
-                default:
+//                case 5:
+//                    mModeTextView.setText("TOUCHPAD");
+//                    touchpadMode = 3;
+//                    break;
+//                default:
                     //Should not be here
-                    return true;
+//                        return true;
             }
             sendMessage(touchpadMode);
             return true;
+
         }
 
         @Override
         public void onLongPress(MotionEvent ev){
-            finish();
+            if(!isScrolling)
+                finish();
+            Log.v("LongPress", "fuck");
+            return;
         }
+
 
     }
     protected void onResume(){
@@ -271,7 +307,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
 //            double aY = Math.round(ev.values[1] * 100d) / 100d;
             double aZ = Math.round(ev.values[2] * 100d) / 100d;
 
-            if(Math.abs(ev.values[2]) > 7) {
+            if(Math.abs(ev.values[2]) > 5 && Math.abs(ev.values[2]) < 10) {
                 String str = "X-axis" + Float.toString(ev.values[0]) + "\nY-axis" + Float.toString(ev.values[1]) + "\nZ-axis" + Float.toString(ev.values[2]);
                 Log.v("sensorValue", str);
                 if(aZ > 0){
@@ -295,7 +331,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
                         isSwipe = 2;
                     }
                 }
-            } else {
+            } else if(Math.abs(ev.values[2]) < 5){
                 if(isSwipe == 2){
                     isSwipe = 0;
                     Log.v("Activate", "Activate");
@@ -479,17 +515,33 @@ public class MainActivity extends WearableActivity implements SensorEventListene
            {
                @Override
                public boolean onTouch(View v, MotionEvent event) {
+                   if(event.getPointerCount() > 1){
+                       Log.d("MutliTouct!!", "func");
+                   }
+                   if(event.getPointerCount() > 1 && (event.getActionMasked() == MotionEvent.ACTION_POINTER_UP || event.getActionMasked() == MotionEvent.ACTION_UP) ){
+                       if(touchpadMode == TOUCHPAD){
+                           touchpadMode = PEN;
+                           mModeTextView.setText("PEN");
+                           sendMessage("Z");
+                       }
+                       return true;
+                   }
+
                    if(mDetector.onTouchEvent(event)){
                        return true;
                    }
-                   if(touchpadMode == 5 && event.getAction() == MotionEvent.ACTION_UP) {
-                       if(isScrolling) {
-                           isScrolling  = false;
-                           sendMessage("S");
-                       }
+
+                   if(touchpadMode == PEN && isScrolling && event.getAction() == MotionEvent.ACTION_UP) {
+                       touchpadMode = TOUCHPAD;
+                       mModeTextView.setText("TOUCHPAD");
+                       isScrolling  = false;
+                       sendMessage("X");
                    }
                    return false;
                }
+
+//                   mDetector.onTouchEvent(event);
+//                   return true;
            }
         );
     }
