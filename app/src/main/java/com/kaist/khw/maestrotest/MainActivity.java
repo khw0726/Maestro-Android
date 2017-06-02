@@ -3,26 +3,20 @@ package com.kaist.khw.maestrotest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.support.v4.view.GestureDetectorCompat;
-import android.support.v4.view.MotionEventCompat;
 import android.support.wearable.activity.WearableActivity;
-import android.support.wearable.view.ConfirmationOverlay;
 import android.support.wearable.view.WatchViewStub;
 import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
-import android.view.OrientationEventListener;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.WindowManager;
@@ -34,6 +28,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorManager;
 import android.widget.Toast;
 
+import java.util.Queue;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -52,7 +47,10 @@ public class MainActivity extends WearableActivity implements SensorEventListene
     private GestureDetector mDetector;
     private TimerTask updateTimerText;
     private Timer mTimer;
-    long elaspedSecond;
+    private int sensorCount = 5;
+    long elapsedSeconds;
+    private double[] accHistory;
+
 
     /*Internal States*/
     private int touchpadMode;
@@ -144,7 +142,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
                         mInsecureSettingButton.setVisibility(View.GONE);
                         mExitButton.setVisibility(View.GONE);
                         touchpadMode = TIMER;
-                        elaspedSecond = 0;
+                        elapsedSeconds = 0;
                         sendMessage("S");
                         mTimer.schedule(updateTimerText, 0, 1000);
                     }
@@ -155,7 +153,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
             }
         });
         touchpadMode = 1;
-
+        accHistory = new double[5];
         mTimer = new Timer();
         updateTimerText = new TimerTask() {
             @Override
@@ -163,8 +161,8 @@ public class MainActivity extends WearableActivity implements SensorEventListene
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        elaspedSecond += 1;
-                        String timeStr = DateUtils.formatElapsedTime(elaspedSecond);
+                        elapsedSeconds += 1;
+                        String timeStr = DateUtils.formatElapsedTime(elapsedSeconds);
                         mTimerView.setText(timeStr);
                     }
                 });
@@ -240,10 +238,6 @@ public class MainActivity extends WearableActivity implements SensorEventListene
                     touchpadMode++;
                     mModeTextView.setText("POINTER");
                     break;
-//                case 5:
-//                    mModeTextView.setText("TOUCHPAD");
-//                    touchpadMode = 3;
-//                    break;
 //                default:
                     //Should not be here
 //                        return true;
@@ -278,6 +272,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
                 mTimerView.setVisibility(View.VISIBLE);
                 mModeTextView.setVisibility(View.GONE);
                 touchpadMode = 6;
+                sensorCount = 5;
                 return true;
             case KeyEvent.KEYCODE_NAVIGATE_PREVIOUS:
                 // Do something that advances a user View to the previous item in an ordered list.
@@ -305,38 +300,69 @@ public class MainActivity extends WearableActivity implements SensorEventListene
     public final void onSensorChanged(SensorEvent ev){
         if(ev.sensor == mSensor) {
 //            double aY = Math.round(ev.values[1] * 100d) / 100d;
-            double aZ = Math.round(ev.values[2] * 100d) / 100d;
-
-            if(Math.abs(ev.values[2]) > 5 && Math.abs(ev.values[2]) < 10) {
+//            double aZ = Math.round(ev.values[2] * 100d) / 100d;
+//            accHistory[4] = accHistory[3];
+//            accHistory[3] = accHistory[2];
+//            accHistory[2] = accHistory[1];
+//            accHistory[1] = accHistory[0];
+//            accHistory[0] = ev.values[2];
+//
+//            double accSum = 0;
+//            for (double acc : accHistory){
+//                Log.v("accHistory", Double.toString(acc));
+//                accSum += acc;
+//            }
+//            Log.v("accHistoryEnd", "end");
+//            if(Math.abs(ev.values[2]) > 4 && Math.abs(ev.values[2]) < 10) {
+            sensorCount++;
+            if(Math.abs(ev.values[2]) > 4 && Math.abs(ev.values[2]) < 10 && sensorCount >5) {
                 String str = "X-axis" + Float.toString(ev.values[0]) + "\nY-axis" + Float.toString(ev.values[1]) + "\nZ-axis" + Float.toString(ev.values[2]);
-                Log.v("sensorValue", str);
-                if(aZ > 0){
-                    if(isSwipe == 0){
-                        isSwipe = 1;
-                        sendMessage(1);
-                        Log.v("next", "next");
-                    } else if(isSwipe == 1){
-                        Log.v("next ignoreing...", "next ignoreing...");
-                    } else if(isSwipe == -1){
-                        isSwipe = 2;
-                        Log.v("Ignore next", "Ignore next");
-                    }
+                if (ev.values[2] > 0) {
+//                    if(isSwipe == 0){
+//                        isSwipe = 1;
+//                        sendMessage(1);
+//                        Log.v("prev", "prev");
+//                        Log.v("sensorValue", str);
+//
+//                    } else if(isSwipe == 1){
+//                        Log.v("prev ignoring...", "prev ignoring...");
+////                        Log.v("sensorValue", str);
+//
+//                    } else if(isSwipe == -1){
+//                        isSwipe = 2;
+//                        Log.v("Ignore prev", "Ignore prev");
+////                        Log.v("sensorValue", str);
+//
+//                    }
+                    sendMessage(1);
+                    sensorCount = 0;
                 } else {
-                    if(isSwipe == 0){
-                        isSwipe = -1;
-                        sendMessage(2);
-                        Log.v("prev", "prev");
-                    } else if (isSwipe == 1){
-                        Log.v("Ignore prev", "Ignore prev");
-                        isSwipe = 2;
-                    }
-                }
-            } else if(Math.abs(ev.values[2]) < 5){
-                if(isSwipe == 2){
-                    isSwipe = 0;
-                    Log.v("Activate", "Activate");
+//                    if(isSwipe == 0){
+//                        isSwipe = -1;
+//                        sendMessage(2);
+//                        Log.v("next", "next");
+//                        Log.v("sensorValue", str);
+//
+//                    } else if (isSwipe == 1){
+//                        Log.v("Ignore next", "Ignore next");
+////                        Log.v("sensorValue", str);
+//
+//                        isSwipe = 2;
+//                    } else if(isSwipe == -1){
+//                        Log.v("next ignoring...", "next ignoring...");
+////                        Log.v("sensorValue", str);
+//
+//                    }
+                    sendMessage(2);
+                    sensorCount = 0;
                 }
             }
+//            } else if(Math.abs(ev.values[2]) < 1){
+//                if(isSwipe == 2){
+//                    isSwipe = 0;
+//                    Log.v("Activate", "Activate");
+//                }
+//            }
         }
     }
 
@@ -518,7 +544,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
                    if(event.getPointerCount() > 1){
                        Log.d("MutliTouct!!", "func");
                    }
-                   if(event.getPointerCount() > 1 && (event.getActionMasked() == MotionEvent.ACTION_POINTER_UP || event.getActionMasked() == MotionEvent.ACTION_UP) ){
+                   if(event.getPointerCount() > 1 && (event.getActionMasked() == MotionEvent.ACTION_POINTER_UP ) ){
                        if(touchpadMode == TOUCHPAD){
                            touchpadMode = PEN;
                            mModeTextView.setText("PEN");
