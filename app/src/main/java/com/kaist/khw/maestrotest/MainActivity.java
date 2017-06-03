@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.wearable.activity.WearableActivity;
+import android.support.wearable.input.RotaryEncoder;
 import android.support.wearable.view.WatchViewStub;
 import android.text.format.DateUtils;
 import android.util.Log;
@@ -49,6 +50,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
     private Timer mTimer;
     private int sensorCount = 5;
     long elapsedSeconds;
+    long rotaryTimestamp;
     private double[] accHistory;
 
 
@@ -176,6 +178,23 @@ public class MainActivity extends WearableActivity implements SensorEventListene
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
     }
+
+    private void setToTouchpad(){
+        isScrolling = false;
+        mModeTextView.setText("TOUCHPAD");
+        touchpadMode = TOUCHPAD;
+    }
+    private void setToPointer(){
+        isScrolling = false;
+        mModeTextView.setText("POINTER");
+        touchpadMode = POINTER;
+    }
+    private void setToPen(){
+        isScrolling = false;
+        sendMessage("Z");
+        mModeTextView.setText("PEN");
+        touchpadMode = PEN;
+    }
     class MyGestureListener extends GestureDetector.SimpleOnGestureListener{
         @Override
         public boolean onDown(MotionEvent ev){
@@ -192,51 +211,24 @@ public class MainActivity extends WearableActivity implements SensorEventListene
         @Override
         public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY){
             isScrolling = true;
+            if(e2.getHistorySize() == 0){
+                sendMessage("Z");
+            }
             sendMessage(distanceX, distanceY);
             Log.d("MyGestureListener", Double.toString(distanceX) + " " + Double.toString(distanceY));
             return true;
         }
 
-//        public boolean onDoubleTapEvent(MotionEvent ev){
-//            if(ev.getActionMasked() == MotionEvent.ACTION_UP){
-//
-////                return true;
-//            } else if(ev.getActionMasked() == MotionEvent.ACTION_MOVE){
-//                Log.v("TapandDragHistory", Integer.toString(ev.getHistorySize()));
-//                if(touchpadMode == TOUCHPAD){
-//                    isScrolling = true;
-//                    if(ev.getHistorySize() == 0) {
-//                        sendMessage("Z");
-//                        Log.d("tapanddrag", "start");
-//                    }
-//                    else {
-//                        int historySize = ev.getHistorySize() - 1;
-//                        double diffX = ev.getHistoricalX(historySize) - ev.getX();
-//                        double diffY = ev.getHistoricalY(historySize) - ev.getY();
-//                        sendMessage(diffX, diffY);
-//                        Log.d("tapanddrag", "moving");
-//                    }
-//                }
-////                return true;
-//            }
-//            return true;
-//        }
-
         public boolean onDoubleTap(MotionEvent ev){
             switch(touchpadMode) {
                 case 4:
-                    isScrolling = false;
-                    mModeTextView.setText("TOUCHPAD");
-                    touchpadMode--;
+                    setToTouchpad();
                     break;
                 case 5:
-                    isScrolling = false;
-                    mModeTextView.setText("TOUCHPAD");
-                    touchpadMode = 3;
+                    setToTouchpad();
                     break;
                 case 3:
-                    touchpadMode++;
-                    mModeTextView.setText("POINTER");
+                    setToPointer();
                     break;
 //                default:
                     //Should not be here
@@ -244,7 +236,6 @@ public class MainActivity extends WearableActivity implements SensorEventListene
             }
             sendMessage(touchpadMode);
             return true;
-
         }
 
         @Override
@@ -263,6 +254,54 @@ public class MainActivity extends WearableActivity implements SensorEventListene
         mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
         isSwipe = 0;
     }
+    @Override
+    public boolean onGenericMotionEvent(MotionEvent ev){
+        if (ev.getAction() == MotionEvent.ACTION_SCROLL
+                && RotaryEncoder.isFromRotaryEncoder(ev) &&
+                (ev.getEventTime() - rotaryTimestamp) > 500) {
+
+            // Note that we negate the delta value here in order to get the right scroll direction.
+            float delta = -RotaryEncoder.getRotaryAxisValue(ev)
+                    * RotaryEncoder.getScaledScrollFactor(mTouchBoard.getContext());
+//            scrollBy(0, Math.round(delta));
+            Log.d("Rotary", Double.toString(RotaryEncoder.getRotaryAxisValue(ev)));
+            Log.d("Delta", Double.toString(delta));
+            if(delta > 15) {
+                rotaryTimestamp = ev.getEventTime();
+                Log.d("DDiyong", "plus");
+                switch (touchpadMode){
+                    case TOUCHPAD:
+                        setToPointer();
+                        break;
+                    case POINTER:
+                        setToPen();
+                        break;
+                    case PEN:
+                        setToTouchpad();
+                        break;
+                }
+                sendMessage(touchpadMode);
+            } else if (delta < -15){
+                rotaryTimestamp = ev.getEventTime();
+                Log.d("DDiyong", "minus");
+                switch (touchpadMode){
+                    case TOUCHPAD:
+                        setToPen();
+                        break;
+                    case POINTER:
+                        setToTouchpad();
+                        break;
+                    case PEN:
+                        setToPointer();
+                        break;
+                }
+                sendMessage(touchpadMode);
+            }
+            return true;
+        }
+        return super.onGenericMotionEvent(ev);
+    }
+
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         switch (keyCode) {
             case KeyEvent.KEYCODE_NAVIGATE_NEXT:
@@ -272,7 +311,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
                 mTimerView.setVisibility(View.VISIBLE);
                 mModeTextView.setVisibility(View.GONE);
                 touchpadMode = 6;
-                sensorCount = 5;
+                sensorCount = 6;
                 return true;
             case KeyEvent.KEYCODE_NAVIGATE_PREVIOUS:
                 // Do something that advances a user View to the previous item in an ordered list.
@@ -315,7 +354,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
 //            Log.v("accHistoryEnd", "end");
 //            if(Math.abs(ev.values[2]) > 4 && Math.abs(ev.values[2]) < 10) {
             sensorCount++;
-            if(Math.abs(ev.values[2]) > 4 && Math.abs(ev.values[2]) < 10 && sensorCount >5) {
+            if(Math.abs(ev.values[2]) > 4 && Math.abs(ev.values[2]) < 10 && sensorCount > 6) {
                 String str = "X-axis" + Float.toString(ev.values[0]) + "\nY-axis" + Float.toString(ev.values[1]) + "\nZ-axis" + Float.toString(ev.values[2]);
                 if (ev.values[2] > 0) {
 //                    if(isSwipe == 0){
@@ -546,9 +585,8 @@ public class MainActivity extends WearableActivity implements SensorEventListene
                    }
                    if(event.getPointerCount() > 1 && (event.getActionMasked() == MotionEvent.ACTION_POINTER_UP ) ){
                        if(touchpadMode == TOUCHPAD){
-                           touchpadMode = PEN;
-                           mModeTextView.setText("PEN");
-                           sendMessage("Z");
+                           setToPen();
+//                           sendMessage("Z");
                        }
                        return true;
                    }
@@ -558,8 +596,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
                    }
 
                    if(touchpadMode == PEN && isScrolling && event.getAction() == MotionEvent.ACTION_UP) {
-                       touchpadMode = TOUCHPAD;
-                       mModeTextView.setText("TOUCHPAD");
+//                       setToTouchpad();
                        isScrolling  = false;
                        sendMessage("X");
                    }
